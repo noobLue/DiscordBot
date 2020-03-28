@@ -51,7 +51,7 @@ namespace DiscordBotAndroid
                 string key = message.Content.Substring(1);
                 if (_messageDict.ContainsKey(key))
                 {
-                    await (_client.GetChannel(_config.Channel) as SocketTextChannel)?.SendMessageAsync(_messageDict[key]);
+                    GetDefaultChannel()?.SendMessageAsync(_messageDict[key]);
                 }
 
                 if (message.Content.Equals("!porn", StringComparison.InvariantCultureIgnoreCase))
@@ -62,12 +62,55 @@ namespace DiscordBotAndroid
                         byte[] originalData = wc.DownloadData(url);
                         MemoryStream stream = new MemoryStream(originalData);
 
-                        await (_client.GetChannel(_config.Channel) as SocketTextChannel)?.SendFileAsync(stream, Path.GetFileName(url.LocalPath), ";)");
+                        await GetDefaultChannel()?.SendFileAsync(stream, Path.GetFileName(url.LocalPath), ";)");
                     }
                 }
+
+                if (message.Content.StartsWith("!add"))
+                {
+                    string[] arr = message.Content.Split(" \"");
+                    if (arr.Length == 3)
+                    {
+                        _messageDict[arr[1].Trim('!').Trim('\"')] = arr[2].Trim('\"');
+                    }
+                    //Serialize to json?
+                }
+
+                if (message.Content.StartsWith("!repeat"))
+                {
+                    await GetDefaultChannel().SendMessageAsync(message.Author.Username + " says: " + message.Content.Substring(message.Content.IndexOf(' ')+1));
+                }
+
+                if (message.Content.StartsWith("!remindme "))
+                {
+                    int delay = Int32.Parse(message.Content.Split(' ')[1]);
+                    Timer(delay, "Alarm ringing after "+delay+ " seconds");
+                }
+
+                if (message.Content.StartsWith("!msg", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    String s = "```\n";
+                    foreach (string k in _messageDict.Keys)
+                    {
+                        s += "Command: !" + k + ",      message: "+_messageDict[k]+"\n";
+                    }
+                    s += "```";
+                    await GetDefaultChannel().SendMessageAsync(s);
+                }
+
             }
         }
 
+        private async void Timer(int delay, string msg)
+        {
+            await Task.Delay(delay * 1000);
+            await GetDefaultChannel().SendMessageAsync(msg);
+        }
+
+        private SocketTextChannel GetDefaultChannel()
+        {
+            return (_client.GetChannel(_config.Channel) as SocketTextChannel);
+        }
 
 
         private Task Log(LogMessage msg)
